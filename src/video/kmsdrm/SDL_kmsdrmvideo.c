@@ -50,6 +50,8 @@
 rga_info_t src_info = {0};
 rga_info_t dst_info = {0};
 
+int g_iOGSVertical = 0; 
+
 static int
 check_modestting(int devindex)
 {
@@ -285,11 +287,17 @@ KMSDRM_InitRotateBuffer(_THIS, int frameWidth, int frameHeight)
     // setup rotation
     src_info.fd = -1;
     src_info.mmuFlag = 1;
-    src_info.rotation = HAL_TRANSFORM_ROT_270;
-
+	if (g_iOGSVertical)
+		src_info.rotation = HAL_TRANSFORM_ROT_180; 
+	else
+		src_info.rotation = HAL_TRANSFORM_ROT_270;
+	
     // swap width and height here because our source buffer (user side render buffer) is 480x320 or 854x480
-    rga_set_rect(&src_info.rect, 0, 0, frameHeight, frameWidth, (frameHeight == 480) ? frameHeight : (frameHeight + 32) & ~31, frameWidth, RK_FORMAT_BGRA_8888);
-
+	if (g_iOGSVertical)
+		rga_set_rect(&src_info.rect, 0, 0, frameWidth, frameHeight, (frameWidth == 480) ? frameWidth : (frameWidth + 32) & ~31, frameHeight, RK_FORMAT_BGRA_8888);
+	else
+		rga_set_rect(&src_info.rect, 0, 0, frameHeight, frameWidth, (frameHeight == 480) ? frameHeight : (frameHeight + 32) & ~31, frameWidth, RK_FORMAT_BGRA_8888);
+	
     dst_info.fd = -1;
     dst_info.mmuFlag = 1;
 
@@ -378,10 +386,12 @@ KMSDRM_FlipHandler(int fd, unsigned int frame, unsigned int sec, unsigned int us
 int
 KMSDRM_VideoInit(_THIS)
 {
+	const char* sdl2_ogs_vertical;
     int i, j;
     SDL_bool found;
     int ret = 0;
     char *devname;
+	SDL_DisplayData *data;
     SDL_VideoData *vdata = ((SDL_VideoData *)_this->driverdata);
     drmModeRes *resources = NULL;
     drmModeConnector *connector = NULL;
@@ -389,8 +399,16 @@ KMSDRM_VideoInit(_THIS)
     SDL_DisplayMode current_mode;
     SDL_VideoDisplay display;
 
+	sdl2_ogs_vertical = getenv("SDL2_OGS_VERTICAL");
+	
+	if (sdl2_ogs_vertical != NULL)
+	{
+		g_iOGSVertical = atoi(sdl2_ogs_vertical);
+		printf("[trngaje] SDL2_OGS_VERTICAL=%s, %d\n", sdl2_ogs_vertical, g_iOGSVertical);
+	}
+	
     /* Allocate display internal data */
-    SDL_DisplayData *data = (SDL_DisplayData *) SDL_calloc(1, sizeof(SDL_DisplayData));
+    data = (SDL_DisplayData *) SDL_calloc(1, sizeof(SDL_DisplayData));
     if (data == NULL) {
         return SDL_OutOfMemory();
     }
@@ -517,8 +535,17 @@ KMSDRM_VideoInit(_THIS)
 
     SDL_zero(current_mode);
 
-    current_mode.w = data->cur_mode.vdisplay;
-    current_mode.h = data->cur_mode.hdisplay;
+	if (g_iOGSVertical) 
+	{
+		current_mode.h = data->cur_mode.vdisplay;
+		current_mode.w = data->cur_mode.hdisplay;
+	}
+	else
+	{
+    	current_mode.w = data->cur_mode.vdisplay;
+    	current_mode.h = data->cur_mode.hdisplay;		
+	}
+	
     current_mode.refresh_rate = data->cur_mode.vrefresh;
 
     /* FIXME ?
