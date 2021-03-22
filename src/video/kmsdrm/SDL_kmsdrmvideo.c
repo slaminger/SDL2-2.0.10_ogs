@@ -288,9 +288,9 @@ KMSDRM_InitRotateBuffer(_THIS, int frameWidth, int frameHeight)
     src_info.fd = -1;
     src_info.mmuFlag = 1;
 	if (g_iOGSVertical)
-		src_info.rotation = HAL_TRANSFORM_ROT_180; 
+		src_info.rotation = HAL_TRANSFORM_ROT_0; 
 	else
-		src_info.rotation = HAL_TRANSFORM_ROT_270;
+		src_info.rotation = HAL_TRANSFORM_ROT_0;
 	
     // swap width and height here because our source buffer (user side render buffer) is 480x320 or 854x480
 	if (g_iOGSVertical)
